@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile data for patients and doctors",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["patient", "doctor"] },
+        "initials": { "type": "string" },
+        "bloodGroup": { "type": "string" },
+        "age": { "type": "number" },
+        "weight": { "type": "number" },
+        "allergies": { "type": "string" },
+        "specialty": { "type": "string", "description": "Doctor specialty" },
+        "emoji": { "type": "string", "description": "Doctor emoji" },
+        "clinic": { "type": "string", "description": "Doctor clinic" },
+        "status": { "type": "string", "enum": ["open", "busy", "break", "closed"] },
+        "waitMins": { "type": "number" },
+        "availability": { "type": "boolean" },
+        "queueCount": { "type": "number" },
+        "maxCapacity": { "type": "number" },
+        "experience": { "type": "number" },
+        "price": { "type": "number" },
+        "regNo": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "role"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Doctor booking records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientUid": { "type": "string" },
+        "patientName": { "type": "string" },
+        "doctor": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "specialty": { "type": "string" }
+          }
+        },
+        "bookedAt": { "type": "string", "format": "date-time" },
+        "seenAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["booked", "seen", "missed"] },
+        "reason": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["id", "patientUid", "doctor", "bookedAt", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Appointment bookings"
+    }
+  }
+}

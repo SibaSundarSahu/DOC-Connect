@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        isOwner(userId) || 
+        resource.data.role == 'doctor'
+      );
+      
+      allow create: if isSignedIn() && isOwner(userId);
+      
+      allow update: if isSignedIn() && (
+        isOwner(userId) || 
+        (
+          // Allow patients to increment/decrement queueCount when booking/completing
+          incoming().diff(existing()).affectedKeys().hasOnly(['queueCount']) &&
+          incoming().queueCount is number
+        )
+      );
+    }
+
+    // --- Appointments Collection ---
+    match /appointments/{appointmentId} {
+      allow read: if isSignedIn() && (
+        resource.data.patientUid == request.auth.uid || 
+        resource.data.doctor.id == request.auth.uid
+      );
+      
+      allow create: if isSignedIn() && (
+        request.resource.data.patientUid == request.auth.uid
+      );
+      
+      allow update: if isSignedIn() && (
+        (resource.data.patientUid == request.auth.uid || resource.data.doctor.id == request.auth.uid)
+      );
+    }
+  }
+}
