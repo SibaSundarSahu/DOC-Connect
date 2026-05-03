@@ -85,6 +85,24 @@ const formatFullDate = (date: any) => {
   return `${isToday ? 'Today, ' : ''}${dayStr}`;
 };
 
+const generateTimeSlots = (date: Date) => {
+  const slots: { t: string, s: 'available' | 'full' }[] = [];
+  const startHour = 9; // 9 AM
+  const endHour = 17; // 5 PM
+  
+  for (let i = startHour; i < endHour; i++) {
+    for (let j = 0; j < 60; j += 30) {
+      const d = new Date(date);
+      d.setHours(i, j, 0, 0);
+      slots.push({
+        t: formatHHMM(d),
+        s: Math.random() > 0.7 ? 'full' : 'available' // random availability for demo
+      });
+    }
+  }
+  return slots;
+};
+
 const timeFromNow = (mins: number) => new Date(Date.now() + mins * 60000);
 
 // --- Mock Data ---
@@ -313,6 +331,8 @@ export default function App() {
 
   // Business Logic State
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [bookingDate, setBookingDate] = useState<Date>(new Date());
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [bookingStatus, setBookingStatus] = useState<Appointment | null>(() => {
     const saved = localStorage.getItem('bookingStatus');
     try {
@@ -527,13 +547,27 @@ export default function App() {
     setBookingStatus(null);
   };
 
+  const availableTimeSlots = useMemo(() => generateTimeSlots(bookingDate), [bookingDate?.toDateString()]);
+
   const confirmBooking = () => {
-    if (!selectedDoctor) return;
+    if (!selectedDoctor || !selectedTimeSlot) return;
+    
+    // Parse selectedTimeSlot to Date
+    const appointmentDate = new Date(bookingDate);
+    const timeParts = selectedTimeSlot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (timeParts) {
+      let hours = parseInt(timeParts[1]);
+      const mins = parseInt(timeParts[2]);
+      if (timeParts[3].toUpperCase() === 'PM' && hours < 12) hours += 12;
+      if (timeParts[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
+      appointmentDate.setHours(hours, mins, 0, 0);
+    }
+
     const appointment: Appointment = {
       id: `T-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
       patientName: profileData.name,
       doctor: selectedDoctor,
-      bookedAt: new Date(),
+      bookedAt: appointmentDate,
       status: 'booked',
       reason: 'General Consultation',
       email: profileData.email
@@ -1379,24 +1413,30 @@ export default function App() {
                       </div>
 
                       <div className="bg-brand-light/30 p-8 rounded-[40px] border border-brand-light shadow-inner">
-                        <div className="flex justify-between items-center mb-6">
-                          <h5 className="text-[10px] font-black text-brand-blue uppercase tracking-[0.2em]">Select Arrival Time</h5>
-                          <p className="text-[10px] font-black text-brand-blue uppercase bg-white/50 px-3 py-1 rounded-full">Today, {formatHHMM(currentTime)}</p>
+                        <div className="flex flex-col mb-6 gap-3">
+                          <h5 className="text-[10px] font-black text-brand-blue uppercase tracking-[0.2em]">Select Arrival Date & Time</h5>
+                          <input 
+                            type="date"
+                            value={bookingDate.toISOString().split('T')[0]}
+                            onChange={(e) => {
+                              const d = new Date(e.target.value);
+                              if (!isNaN(d.getTime())) setBookingDate(d);
+                              setSelectedTimeSlot(null); // Reset time slot on date change
+                            }}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="bg-card-bg border border-brand-blue/20 p-4 rounded-2xl text-text-main font-bold focus:outline-none focus:ring-2 focus:ring-brand-blue/50 text-sm w-full uppercase tracking-wider"
+                          />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                        {[
-                          { t: '10:45 AM', s: 'available' },
-                          { t: '11:00 AM', s: 'available' },
-                          { t: '11:15 AM', s: 'full' },
-                          { t: '11:30 AM', s: 'full' },
-                        ].map((slot, i) => (
+                        <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto no-scrollbar pr-2 h-full">
+                        {availableTimeSlots.map((slot, i) => (
                           <button 
                             key={slot.t} 
                             disabled={slot.s === 'full'}
+                            onClick={() => setSelectedTimeSlot(slot.t)}
                             className={`p-6 rounded-3xl border-2 font-black text-base transition-all ${
                               slot.s === 'full' 
                                 ? 'bg-input-bg border-border-main text-text-muted opacity-30 cursor-not-allowed' 
-                                : i === 0 
+                                : selectedTimeSlot === slot.t
                                   ? 'bg-brand-blue border-brand-blue text-white shadow-blue active:scale-95' 
                                   : 'bg-card-bg border-border-main text-text-main shadow-sm hover:border-brand-blue active:scale-95'
                             }`}
@@ -1426,10 +1466,19 @@ export default function App() {
 
                       <button 
                         onClick={confirmBooking}
-                        className="w-full bg-brand-blue text-white font-black py-6 rounded-[32px] shadow-blue flex flex-col items-center gap-1 active:scale-95 transition-transform group"
+                        disabled={!selectedTimeSlot}
+                        className={`w-full font-black py-6 rounded-[32px] flex flex-col items-center gap-1 transition-all ${
+                          !selectedTimeSlot 
+                            ? 'bg-input-bg text-text-muted cursor-not-allowed opacity-50' 
+                            : 'bg-brand-blue text-white shadow-blue active:scale-95 group'
+                        }`}
                       >
                         <span className="text-lg tracking-widest uppercase" data-i18n="confirm_booking">{t('confirm_booking')}</span>
-                        <span className="text-[10px] opacity-60 font-black uppercase tracking-[0.2em]">Estimated Wait Time: {selectedDoctor.waitMins} mins</span>
+                        {selectedTimeSlot ? (
+                          <span className="text-[10px] opacity-60 font-black uppercase tracking-[0.2em]">Estimated Wait Time: {selectedDoctor.waitMins} mins</span>
+                        ) : (
+                          <span className="text-[10px] opacity-60 font-black uppercase tracking-[0.2em]">Please select a time slot</span>
+                        )}
                       </button>
                     </div>
                   </div>
