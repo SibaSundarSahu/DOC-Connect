@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "DM Serif Display", serif;
+
+  /* Theme variables will be managed via CSS variables in :root */
+  --color-brand-blue: #1a6ef5;
+  --color-brand-dark: #1356cc;
+  --color-brand-light: #e8f0fe;
+  
+  --color-bg-main: var(--bg);
+  --color-card-bg: var(--card);
+  --color-text-main: var(--text);
+  --color-text-muted: var(--text-2);
+  --color-border-main: var(--border);
+  --color-input-bg: var(--input-bg);
+  --color-nav-bg: var(--nav-bg);
+  --color-btn-sec-bg: var(--btn-secondary-bg);
+  --color-btn-sec-text: var(--btn-secondary-text);
+  --color-page-bg: var(--bg);
+
+  --shadow-blue: 0 4px 12px rgba(26, 110, 245, 0.1);
+}
+
+:root[data-theme="light"] {
+  --bg: #f8faff;
+  --card: #ffffff;
+  --text: #0f172a;
+  --text-2: #64748b;
+  --border: #e2e8f0;
+  --input-bg: #f1f5f9;
+  --nav-bg: #ffffff;
+  --btn-secondary-bg: #f1f5f9;
+  --btn-secondary-text: #0f172a;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0a0f1e;
+  --card: #131929;
+  --text: #f1f5f9;
+  --text-2: #94a3b8;
+  --border: #1e2d45;
+  --input-bg: #0f172a;
+  --nav-bg: #0d1526;
+  --btn-secondary-bg: #1e2d45;
+  --btn-secondary-text: #cbd5e1;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-main text-text-main font-sans transition-colors duration-300;
+  }
+}
+
+/* Updated Toggle Switch for Dark Mode visibility */
+.toggle-track {
+  @apply w-12 h-6 rounded-full bg-border-main relative cursor-pointer p-1 transition-colors;
+}
+.toggle-track[data-on="true"] {
+  @apply bg-brand-blue;
+}
+.toggle-knob {
+  @apply w-4 h-4 rounded-full bg-white shadow-sm transition-transform;
+}
+.toggle-track[data-on="true"] .toggle-knob {
+  @apply translate-x-6;
+}
+
+/* Skeleton Shimmer */
+.skeleton {
+  @apply bg-slate-100 dark:bg-slate-800 relative overflow-hidden;
+}
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0 -translate-x-full;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Lang Option Style */
+.lang-opt {
+  @apply w-full p-2.5 rounded-xl bg-input-bg text-text-main text-sm font-semibold mb-1.5 border-none cursor-pointer text-left transition-all;
+}
+.lang-opt.selected {
+  @apply border-l-[3px] border-brand-blue bg-brand-light/30;
+}
