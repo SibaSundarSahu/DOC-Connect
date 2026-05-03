@@ -15,8 +15,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  signInWithPopup,
-  GoogleAuthProvider,
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth';
@@ -538,45 +536,68 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Handle authentication state
   useEffect(() => {
-    // Set persistence to LOCAL so user stays logged in
-    setPersistence(auth, browserLocalPersistence);
+    let unsubAuth: () => void;
 
-    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userObj: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          displayName: firebaseUser.displayName || 'User'
-        };
-        setUser(userObj);
-        
-        // Fetch profile and role
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setProfileData(data as ProfileData);
-          const role = data.role || 'patient';
-          setUserRole(role);
-          if (data.status) setDocStatus(data.status);
-          
-          setCurrentScreen(role === 'doctor' ? 'doctor-dashboard' : 'home');
-        } else {
-          // If first time login, current screen might still be login
-          // The handleUserProfile will trigger and create the doc
-          // We can't determine the role yet if it's a first time login from Google
-          // but we'll default to patient if not found.
-        }
-      } else {
-        setUser(null);
-        setCurrentScreen('login');
+    const initAuth = async () => {
+      // 1. Initialize Persistence
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (err) {
+        console.error("Persistence setup error", err);
       }
-      setIsAuthLoading(false);
-    });
 
-    return () => unsubAuth();
-  }, []); // Run only once
+      // 2. Setup Auth Listener (Source of Truth)
+      unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+        console.log("AuthProvider: Auth state changed. User:", firebaseUser?.uid);
+        
+        if (firebaseUser) {
+          const userObj: User = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            displayName: firebaseUser.displayName || 'User'
+          };
+          setUser(userObj);
+          
+          // Fetch profile and role
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          console.log("AuthProvider: Fetching user document...");
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            console.log("AuthProvider: User document exists. Data:", data);
+            setProfileData(data as ProfileData);
+            const role = data.role || 'patient';
+            setUserRole(role);
+            if (data.status) setDocStatus(data.status);
+            
+            setCurrentScreen(role === 'doctor' ? 'doctor-dashboard' : 'home');
+          } else {
+            console.log("AuthProvider: User document does NOT exist.");
+            setCurrentScreen('home'); // Try setting to 'home' if profile not found for now
+          }
+        } else {
+          console.log("AuthProvider: No user logged in.");
+          setUser(null);
+          setCurrentScreen('login');
+        }
+        
+        // Ensure loading stops after handling auth state
+        setIsAuthLoading(false);
+        console.log("AuthProvider: Auth loading finished.");
+      });
+    };
+
+    initAuth();
+
+    return () => {
+      if (unsubAuth) {
+        unsubAuth();
+      }
+    };
+  }, []);
+
 
   // Real-time profile listener
   useEffect(() => {
@@ -1104,30 +1125,6 @@ export default function App() {
     }
   };
 
-  const doLogin = async (role: UserRole) => {
-    setIsAuthSubmitting(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        const userObj: User = {
-          uid: result.user.uid,
-          email: result.user.email || '',
-          displayName: result.user.displayName || 'User'
-        };
-        setUser(userObj);
-        await handleUserProfile(userObj, role);
-        setCurrentScreen(role === 'doctor' ? 'doctor-dashboard' : 'home');
-        showToast(CheckCircle2, `Logged in as ${role}`);
-      }
-    } catch (error) {
-      console.error("Google login error Details:", error);
-      showToast(AlertTriangle, `Google login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsAuthSubmitting(false);
-    }
-  };
-
   const doEmailAuth = async (role: UserRole) => {
     if (!authEmail || !authPassword) {
       showToast(AlertTriangle, "Please enter email and password");
@@ -1164,7 +1161,11 @@ export default function App() {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const data = userDoc.data();
-          const targetRole = data.role || role;
+          let targetRole = data.role;
+          if (targetRole !== role) {
+            await updateDoc(userDocRef, { role: role });
+            targetRole = role;
+          }
           setCurrentScreen(targetRole === 'doctor' ? 'doctor-dashboard' : 'home');
         } else {
           await handleUserProfile(userObj, role);
@@ -1187,7 +1188,11 @@ export default function App() {
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
             const data = userDoc.data();
-            const targetRole = data.role || role;
+            let targetRole = data.role;
+            if (targetRole !== role) {
+              await updateDoc(userDocRef, { role: role });
+              targetRole = role;
+            }
             setCurrentScreen(targetRole === 'doctor' ? 'doctor-dashboard' : 'home');
           } else {
             await handleUserProfile(userObj, role);
@@ -1639,21 +1644,6 @@ export default function App() {
                       <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">OR</span>
                       <div className="flex-1 h-[1px] bg-white/20"></div>
                     </div>
-
-                    <button 
-                      onClick={() => doLogin(userRole)}
-                      disabled={isAuthSubmitting}
-                      className="w-full bg-white/10 border border-white/20 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      {isAuthSubmitting ? (
-                        <RefreshCw size={18} className="animate-spin" />
-                      ) : (
-                        <>
-                          <Globe size={18} />
-                          <span className="uppercase tracking-widest text-xs">Continue with Google</span>
-                        </>
-                      )}
-                    </button>
 
                     <button 
                       onClick={() => setIsSignUp(!isSignUp)}
