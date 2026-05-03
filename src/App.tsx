@@ -561,9 +561,7 @@ export default function App() {
           setUserRole(role);
           if (data.status) setDocStatus(data.status);
           
-          if (currentScreen === 'login') {
-            setCurrentScreen(role === 'doctor' ? 'doctor-dashboard' : 'home');
-          }
+          setCurrentScreen(role === 'doctor' ? 'doctor-dashboard' : 'home');
         } else {
           // If first time login, current screen might still be login
           // The handleUserProfile will trigger and create the doc
@@ -572,15 +570,13 @@ export default function App() {
         }
       } else {
         setUser(null);
-        if (currentScreen !== 'login') {
-          setCurrentScreen('login');
-        }
+        setCurrentScreen('login');
       }
       setIsAuthLoading(false);
     });
 
     return () => unsubAuth();
-  }, [currentScreen]);
+  }, []); // Run only once
 
   // Real-time profile listener
   useEffect(() => {
@@ -1125,8 +1121,8 @@ export default function App() {
         showToast(CheckCircle2, `Logged in as ${role}`);
       }
     } catch (error) {
-      console.error("Google login error", error);
-      showToast(AlertTriangle, "Google login failed");
+      console.error("Google login error Details:", error);
+      showToast(AlertTriangle, `Google login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsAuthSubmitting(false);
     }
@@ -1546,12 +1542,12 @@ export default function App() {
           <RatingModal />
 
           <main className={`flex-1 flex flex-col ${userRole === 'patient' && !['login', 'success'].includes(currentScreen) ? 'pb-32' : ''}`}>
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
             {/* Screen: LOGIN */}
             {currentScreen === 'login' && (
               <motion.div 
                 key="login"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 bg-gradient-to-br from-brand-blue to-brand-dark p-6 flex items-center justify-center text-white overflow-y-auto"
               >
                 <div className="w-full max-w-md space-y-8 bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 shadow-2xl my-8">
@@ -1674,7 +1670,7 @@ export default function App() {
             {currentScreen === 'profile' && (
               <motion.div 
                 key="profile"
-                initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -30, opacity: 0 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="p-6 h-full flex flex-col items-center overflow-y-auto no-scrollbar"
               >
                 <div className="w-full max-w-4xl py-6 md:py-10">
@@ -1848,7 +1844,7 @@ export default function App() {
             {currentScreen === 'settings' && (
               <motion.div 
                 key="settings"
-                initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -30, opacity: 0 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 overflow-y-auto no-scrollbar"
               >
                 <div className="max-w-4xl mx-auto p-6 md:py-12">
@@ -1974,7 +1970,7 @@ export default function App() {
             {currentScreen === 'home' && (
               <motion.div 
                 key="home"
-                initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -30, opacity: 0 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 overflow-y-auto no-scrollbar pb-20"
               >
                 <div className="max-w-4xl mx-auto px-6 py-10">
@@ -2143,7 +2139,7 @@ export default function App() {
             {currentScreen === 'doctors' && (
               <motion.div 
                 key="doctors"
-                initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -30, opacity: 0 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 overflow-y-auto no-scrollbar"
               >
                 <div className="max-w-4xl mx-auto p-6 md:py-12">
@@ -2290,7 +2286,7 @@ export default function App() {
             {currentScreen === 'book' && selectedDoctor && (
               <motion.div 
                 key="book"
-                initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 overflow-y-auto no-scrollbar"
               >
                 <div className="max-w-4xl mx-auto p-6 md:py-12">
@@ -2390,7 +2386,7 @@ export default function App() {
             {currentScreen === 'success' && bookingStatus && (
               <motion.div 
                 key="success"
-                initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 flex flex-col overflow-y-auto no-scrollbar"
               >
                 <div className="max-w-xl mx-auto w-full p-8 md:py-20 flex flex-col items-center text-center">
@@ -2474,7 +2470,7 @@ export default function App() {
             {currentScreen === 'token' && bookingStatus && (
               <motion.div 
                 key="token"
-                initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -30, opacity: 0 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 overflow-y-auto no-scrollbar"
               >
                 <div className="max-w-4xl mx-auto p-6 md:py-16">
@@ -2611,7 +2607,7 @@ export default function App() {
             {currentScreen === 'doctor-dashboard' && (
               <motion.div 
                 key="doctor"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                initial={{ opacity: 0, scale: 0.98, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -15 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="flex-1 overflow-y-auto no-scrollbar bg-screen-bg"
               >
                 <div className="max-w-4xl mx-auto p-6 md:py-16">
